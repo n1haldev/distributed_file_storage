@@ -1,9 +1,12 @@
 package p2p
 
 import (
+	// "bytes"
+	"fmt"
 	"net"
 	"sync"
-	"fmt"
+
+	// "github.com/bytedance/sonic/decoder"
 )
 
 // TCPPeer represents node over a TCP connection
@@ -22,17 +25,26 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+type TCPTransportOpts struct {
+	listenAddr 		string
+	HandshakeFunc	HandshakeFunc
+	Decoder			Decoder
+}
+
 type TCPTransport struct {
+	TCPTransportOpts
 	listenAddress string
 	listener 	net.Listener
+	shakeHands 	HandshakeFunc
+	decoder		Decoder
 
 	transportLocks 	sync.RWMutex
 	peers 		map[net.Addr]Peer
 }
 
-func NewTCPTransport(listenAddr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		listenAddress: listenAddr,
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -53,14 +65,31 @@ func (t *TCPTransport) acceptor() {
 		if err != nil {
 			fmt.Printf("Error accepting connection: %s\n", err)
 		}
+		fmt.Printf("New incoming connection from %+v\n", conn)
 
 		go t.handleConnection(conn)
 	}
 }
 
+type Temp struct {}
+
 func (t *TCPTransport) handleConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
 
-	fmt.Printf("New incoming connection from %+v\n", peer)
+	if err := t.HandshakeFunc(peer); err != nil {
+		fmt.Printf("Error shaking hands with peer %+v: %s\n", peer, err)
+		conn.Close()
+		return
+	}
+
+	// countDecodeErrors := 0
+	// Read Loop
+	msg := &Temp{}
+	for {
+		if err := t.Decoder.Decode(conn, msg); err != nil {
+			fmt.Println("TCP error decoding message: %s\n", err)
+			continue
+		}
+	}
 }
 
