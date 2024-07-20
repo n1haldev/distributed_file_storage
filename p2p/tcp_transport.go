@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"sync"
-
 	// "github.com/bytedance/sonic/decoder"
 )
 
@@ -19,27 +18,27 @@ type TCPPeer struct {
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
-	return &TCPPeer {
-		conn: conn,
+	return &TCPPeer{
+		conn:     conn,
 		outbound: outbound,
 	}
 }
 
 type TCPTransportOpts struct {
-	ListenAddr 		string
-	HandshakeFunc	HandshakeFunc
-	Decoder			Decoder
+	ListenAddr    string
+	HandshakeFunc HandshakeFunc
+	Decoder       Decoder
 }
 
 type TCPTransport struct {
 	TCPTransportOpts
 	listenAddress string
-	listener 	net.Listener
-	shakeHands 	HandshakeFunc
-	decoder		Decoder
+	listener      net.Listener
+	shakeHands    HandshakeFunc
+	decoder       Decoder
 
-	transportLocks 	sync.RWMutex
-	peers 		map[net.Addr]Peer
+	transportLocks sync.RWMutex
+	peers          map[net.Addr]Peer
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
@@ -71,14 +70,14 @@ func (t *TCPTransport) acceptor() {
 	}
 }
 
-type Temp struct {}
+type Temp struct{}
 
 func (t *TCPTransport) handleConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
 
 	if err := t.HandshakeFunc(peer); err != nil {
-		fmt.Printf("Error shaking hands with peer %+v: %s\n", peer, err)
 		conn.Close()
+		fmt.Printf("Error shaking hands with peer %+v: %s\n", peer, err)
 		return
 	}
 
@@ -94,4 +93,3 @@ func (t *TCPTransport) handleConnection(conn net.Conn) {
 		fmt.Printf("message: %+v\n", msg)
 	}
 }
-
