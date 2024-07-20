@@ -26,7 +26,7 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 }
 
 type TCPTransportOpts struct {
-	listenAddr 		string
+	ListenAddr 		string
 	HandshakeFunc	HandshakeFunc
 	Decoder			Decoder
 }
@@ -84,12 +84,14 @@ func (t *TCPTransport) handleConnection(conn net.Conn) {
 
 	// countDecodeErrors := 0
 	// Read Loop
-	msg := &Temp{}
+	msg := &Message{}
 	for {
 		if err := t.Decoder.Decode(conn, msg); err != nil {
 			fmt.Println("TCP error decoding message: %s\n", err)
 			continue
 		}
+
+		fmt.Printf("message: %+v\n", msg)
 	}
 }
 

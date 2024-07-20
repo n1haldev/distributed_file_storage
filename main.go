@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"github.com/n1haldev/distributed_file_storage/p2p"
-	)
+)
 
 func main() {
 	tcpOpts := p2p.TCPTransportOpts{
