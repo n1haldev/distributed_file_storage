@@ -1,12 +1,9 @@
 package p2p
 
 import (
-	// "bytes"
 	"fmt"
 	"net"
-	"sync"
 	"log"
-	// "github.com/bytedance/sonic/decoder"
 )
 
 // TCPPeer represents node over a TCP connection
@@ -29,20 +26,32 @@ type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
 	Decoder       Decoder
-}		
+}	
+
+// Close implements the Peer Interface
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
 
 type TCPTransport struct {
 	TCPTransportOpts
-	listener      net.Listener
+	listener      	net.Listener
+	rpcchan	   		chan RPC
 	
-	transportLocks sync.RWMutex
-	peers          map[net.Addr]Peer
+	// transportLocks sync.RWMutex
+	// peers          map[net.Addr]Peer
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		TCPTransportOpts: opts,
+		TCPTransportOpts: 	opts,
+		rpcchan: 			make(chan RPC),
 	}
+}
+
+// Implements the Transport interface, which will return read-onlychannel of RPCs
+func (t *TCPTransport) Consume() <- chan RPC {
+	return t.rpcchan
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -83,13 +92,15 @@ func (t *TCPTransport) handleConnection(conn net.Conn) {
 
 	// countDecodeErrors := 0
 	// Read Loop
-	msg := &Message{}
+	rpc := RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, msg); err != nil {
+		if err := t.Decoder.Decode(conn, &rpc); err != nil {
 			fmt.Printf("TCP error decoding message: %s\n", err)
 			continue
 		}
 
-		fmt.Printf("message: %+v\n", msg)
+		rpc.From = conn.RemoteAddr()
+
+		fmt.Printf("message: %+v\n", rpc)
 	}
 }
