@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"log"
 	// "github.com/bytedance/sonic/decoder"
 )
 
@@ -28,15 +29,12 @@ type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
 	Decoder       Decoder
-}
+}		
 
 type TCPTransport struct {
 	TCPTransportOpts
-	listenAddress string
 	listener      net.Listener
-	shakeHands    HandshakeFunc
-	decoder       Decoder
-
+	
 	transportLocks sync.RWMutex
 	peers          map[net.Addr]Peer
 }
@@ -48,13 +46,17 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
-	ln, err := net.Listen("tcp", t.listenAddress)
+	var err error
+
+	t.listener, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return err
 	}
 
-	t.listener = ln
 	go t.acceptor()
+
+	log.Printf("TCP transport listening on port: %s\n", t.ListenAddr)
+
 	return nil
 }
 
@@ -69,8 +71,6 @@ func (t *TCPTransport) acceptor() {
 		go t.handleConnection(conn)
 	}
 }
-
-type Temp struct{}
 
 func (t *TCPTransport) handleConnection(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)

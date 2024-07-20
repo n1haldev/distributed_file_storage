@@ -8,7 +8,7 @@ package p2p
 
 // func TestTCPTransport(t *testing.T) {
 // 	listenAddr := ":6969"
-// 	tr := NewTCPTransport(listenAddr)
+// 	tr := NewTCPTransport(listenAddr, GOBDecoder{}, NOPHandshakeFunc)
 // 	assert.Equal(t, listenAddr, tr.listenAddress)
 
 // 	// Basic Server
