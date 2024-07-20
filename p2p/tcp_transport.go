@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"log"
+	// "reflect"
 )
 
 // TCPPeer represents node over a TCP connection
@@ -20,12 +21,13 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 		conn:     conn,
 		outbound: outbound,
 	}
-}
+}	
 
 type TCPTransportOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
 	Decoder       Decoder
+	OnPeer		  func(Peer) error
 }	
 
 // Close implements the Peer Interface
@@ -82,24 +84,40 @@ func (t *TCPTransport) acceptor() {
 }
 
 func (t *TCPTransport) handleConnection(conn net.Conn) {
+	var err error
+	
+	defer func() {
+		fmt.Printf("Closing connection: %s", err)
+		conn.Close()
+	}()
+	
 	peer := NewTCPPeer(conn, true)
+		
 
 	if err := t.HandshakeFunc(peer); err != nil {
-		conn.Close()
-		fmt.Printf("Error shaking hands with peer %+v: %s\n", peer, err)
 		return
+	}
+
+	if t.OnPeer != nil {
+		if err := t.OnPeer(peer); err != nil {
+			return
+		}
 	}
 
 	// countDecodeErrors := 0
 	// Read Loop
 	rpc := RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, &rpc); err != nil {
-			fmt.Printf("TCP error decoding message: %s\n", err)
-			continue
+		err := t.Decoder.Decode(conn, &rpc); 
+
+		if err != nil {
+			// fmt.Printf("TCP Read error decoding message: %s\n", err)
+			// continue
+			return
 		}
 
 		rpc.From = conn.RemoteAddr()
+		t.rpcchan <- rpc
 
 		fmt.Printf("message: %+v\n", rpc)
 	}
