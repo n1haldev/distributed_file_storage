@@ -30,6 +30,12 @@ func TestStore(t *testing.T) {
 	if err := s.writeStream(key, data); err != nil {
 		t.Error(err)
 	}
+
+	res := assert.True(t, s.Has(key))
+	if !res {
+		t.Errorf("Key %s not found", key)
+	}
+	log.Println("Key found")
 	
 	r, err := s.Read(key)
 	if err != nil {
