@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"log"
+	"errors"
 	// "reflect"
 )
 
@@ -56,6 +57,10 @@ func (t *TCPTransport) Consume() <- chan RPC {
 	return t.rpcchan
 }
 
+func (t *TCPTransport) Close() error {
+	return t.listener.Close()
+}
+
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
 
@@ -74,16 +79,31 @@ func (t *TCPTransport) ListenAndAccept() error {
 func (t *TCPTransport) acceptor() {
 	for {
 		conn, err := t.listener.Accept()
+		if errors.Is(err, net.ErrClosed) {
+			return
+		}
 		if err != nil {
 			fmt.Printf("Error accepting connection: %s\n", err)
 		}
 		fmt.Printf("New incoming connection from %+v\n", conn)
 
-		go t.handleConnection(conn)
+		go t.handleConnection(conn, false)
 	}
 }
 
-func (t *TCPTransport) handleConnection(conn net.Conn) {
+// Dial implements the Transport interface
+func (t *TCPTransport) Dial(addr string) error {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	go t.handleConnection(conn, true)
+
+	return nil
+}
+
+func (t *TCPTransport) handleConnection(conn net.Conn, outbound bool) {
 	var err error
 	
 	defer func() {
@@ -91,7 +111,7 @@ func (t *TCPTransport) handleConnection(conn net.Conn) {
 		conn.Close()
 	}()
 	
-	peer := NewTCPPeer(conn, true)
+	peer := NewTCPPeer(conn, outbound)
 		
 
 	if err := t.HandshakeFunc(peer); err != nil {
