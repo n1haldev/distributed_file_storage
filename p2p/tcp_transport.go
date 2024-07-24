@@ -52,6 +52,10 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	}
 }
 
+func (p *TCPPeer) RemoteAddr() net.Addr {
+	return p.conn.RemoteAddr()
+}
+
 // Implements the Transport interface, which will return read-onlychannel of RPCs
 func (t *TCPTransport) Consume() <- chan RPC {
 	return t.rpcchan

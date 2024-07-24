@@ -2,36 +2,38 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/n1haldev/distributed_file_storage/p2p"
 )
 
-func main() {
-	tcpTransportOpts := p2p.TCPTransportOpts{
-		ListenAddr: ":3000",
+func makeServer(listenAddr string, nodes ...string) *FileServer {
+	tcpTransportOpts := p2p.TCPTransportOpts {
+		ListenAddr: listenAddr,
 		HandshakeFunc: p2p.NOPHandshakeFunc,
 		Decoder: p2p.DefaultDecoder{},
-		// TODO: onPeer func
-		// OnPeer: ,
 	}
 
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
 
 	fileServerOpts := FileServerOpts {
-		StorageRoot: "nihal_network",
+		StorageRoot: listenAddr + "_network",
 		PathTransformFunc: CasPathTransformFunc,
 		Transport: tcpTransport,
-		BootstrapNodes: []string{":4000"},
+		BootstrapNodes: nodes,
 	}
-	s := NewFileServer(fileServerOpts)
+
+	fs := NewFileServer(fileServerOpts)
+
+	return fs
+}
+
+func main() {
+	s1 := makeServer(":3000", "")
+	s2 := makeServer(":4000", ":3000")
 
 	go func() {
-		time.Sleep(time.Second * 3)
-		s.Stop()
+		log.Fatal(s1.Start())
 	}()
 
-	if err := s.Start(); err != nil {
-		log.Fatal(err)
-	}
+	s2.Start()
 }
